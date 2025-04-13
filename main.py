@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Optional, Self
-from pprint import pprint
 
 
 def contains_all[T](__a: set[T], __b: set[T]) -> bool:
@@ -13,6 +12,8 @@ def contains_any[T](__a: set[T], __b: set[T]) -> bool:
 
 @dataclass
 class FD:
+    """Represents a functional dependency of database attributes."""
+
     lhs: set[str]
     rhs: set[str]
 
@@ -27,6 +28,8 @@ class FD:
 
 @dataclass
 class Relation:
+    """Represents a database relation (or table) as set of attributes."""
+
     attrs: set[str]
 
     def copy(self) -> Self:
@@ -41,7 +44,7 @@ class Relation:
     def format(self, deps: list[FD]) -> str:
         key = get_primary_key(self, deps)
         key_str = ", ".join(map(str, key))
-        remaining_attrs = self.attrs.difference(key)
+        remaining_attrs = self.attrs - key
         remaining_str = ", ".join(map(str, remaining_attrs))
         if remaining_attrs:
             return f"({key_str}, {remaining_str})"
@@ -55,14 +58,14 @@ def print_relations(relations: list[Relation], deps: list[FD]) -> None:
 
 
 def get_primary_key(relation: Relation, deps: list[FD]) -> set[str]:
+    """Returns the primary key of a relation given a set of
+    functional dependencies.
+    """
     key = relation.attrs.copy()
     for dep in deps:
-        # print(f"\tDep: {dep}")
         if relation.contains_all(dep.lhs):
-            # print("\tcontains")
             key -= dep.rhs
         else:
-            # print("\tnot contains")
             pass
     return key
 
@@ -72,13 +75,16 @@ def get_dependency_violation(
     deps: list[FD],
     key: set[str],
 ) -> Optional[FD]:
+    """Returns the functional dependency that is violated by a
+    relation in terms of the Boyce-Codd Normal Form if it exists,
+    otherwise returns `None`.
+    """
     # print(f"GET_DEPENDENCY_VIOLATION({relation.attrs})")
     transitive_dep: Optional[FD] = None
     for dep in deps:
         if not relation.contains_all(dep.lhs) or \
            not relation.contains_any(dep.rhs):
-            # Inapplicable dependency
-            continue
+            continue # Inapplicable dependency
         if contains_all(dep.lhs, key):
             print("Valid dependency:", dep)
         elif contains_all(key, dep.lhs):
@@ -92,13 +98,14 @@ def get_dependency_violation(
 
 
 def get_cover(attrs: set[str], deps: list[FD]) -> set[str]:
+    """Returns the cover of a set of attributes given a set of
+    functional dependencies.
+    """
     cover = attrs.copy()
     while True:
-        # print(f"\tcover: {cover}")
         added = False
         for dep in deps:
             if contains_all(cover, dep.lhs) and not contains_all(cover, dep.rhs):
-                # print(f"\tAdding dependency: {dep}")
                 cover = cover.union(dep.rhs)
                 added = True
         if not added:
@@ -110,6 +117,9 @@ def bcnf_decomposition(
     relations: list[Relation],
     deps: list[FD],
 ) -> list[Relation]:
+    """Decomposes a set a relations based on the Boyce-Codd
+    Normal Form reduction algorithm.
+    """
     relations = [rel.copy() for rel in relations]
     while True:
         print("\nRelations: ")
@@ -129,7 +139,7 @@ def bcnf_decomposition(
             # print("Cover:", cover)
             new_relation = Relation(cover)
             reduced_relation = Relation(
-                relation.attrs.difference(cover.difference(violation.lhs))
+                relation.attrs - (cover - violation.lhs)
             )
             # print(f"New relation: {new_relation.format(deps)}")
             # print(f"Reduced relation: {reduced_relation.format(deps)}")

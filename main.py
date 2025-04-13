@@ -6,9 +6,9 @@ from pprint import pprint
 def contains_all[T](__a: set[T], __b: set[T]) -> bool:
     return all(item in __a for item in __b)
 
+
 def contains_any[T](__a: set[T], __b: set[T]) -> bool:
     return any(item in __a for item in __b)
-
 
 
 @dataclass
@@ -57,16 +57,17 @@ def get_dependency_violation(
     deps: list[FD],
     key: set[str],
 ) -> Optional[FD]:
+    # print(f"GET_DEPENDENCY_VIOLATION({relation.attrs})")
     transitive_dep: Optional[FD] = None
     for dep in deps:
+        if not relation.contains_all(dep.lhs) or \
+           not relation.contains_any(dep.rhs):
+            # Inapplicable dependency
+            continue
         if contains_all(dep.lhs, key):
-            print("Valid dependency (superkey lhs):", dep)
+            print("Valid dependency:", dep)
         elif contains_all(key, dep.lhs):
             print("Partial dependency:", dep)
-            if not relation.contains_any(dep.rhs):
-                # Maybe we have to check for this later, after this function too
-                print("What?")
-                input("pause")
             return dep.copy()
         else:
             print("Transitive dependency:", dep)
@@ -78,11 +79,11 @@ def get_dependency_violation(
 def get_cover(attrs: set[str], deps: list[FD]) -> set[str]:
     cover = attrs.copy()
     while True:
-        print(f"\tcover: {cover}")
+        # print(f"\tcover: {cover}")
         added = False
         for dep in deps:
             if contains_all(cover, dep.lhs) and not contains_all(cover, dep.rhs):
-                print(f"\tAdding dependency: {dep}")
+                # print(f"\tAdding dependency: {dep}")
                 cover = cover.union(dep.rhs)
                 added = True
         if not added:
@@ -96,31 +97,30 @@ def bcnf_decomposition(
 ) -> list[Relation]:
     relations = [rel.copy() for rel in relations]
     while True:
-        print("Relations: ")
+        print("\nRelations: ")
         pprint(relations)
+        print()
         violation_found = False
         for i, relation in enumerate(relations):
             key = get_primary_key(relation, deps)
-            print("Key:", key)
+            # print("Key:", key)
             violation = get_dependency_violation(relation, deps, key)
             if violation is None:
                 continue
             else:
                 violation_found = True
-            print("Violation:", violation)
+            # print("Violation:", violation)
             cover = get_cover(violation.lhs, deps)
+            # print("Cover:", cover)
             new_relation = Relation(cover)
             reduced_relation = Relation(
                 relation.attrs.difference(cover.difference(violation.lhs))
             )
-            print(f"{new_relation=}")
-            print(f"{reduced_relation=}")
-            # print(f"Before: {relations=}")
+            # print(f"{new_relation=}")
+            # print(f"{reduced_relation=}")
             del relations[i]
             relations.insert(i, new_relation)
             relations.insert(i, reduced_relation)
-            # print(f"After: {relations=}")
-            input("Pause")
             break
         if not violation_found:
             break
@@ -128,16 +128,12 @@ def bcnf_decomposition(
 
 
 def main() -> None:
-    # relation = Relation({"A", "B", "C", "D"})
     relation = Relation({
         "traveler ssn", "agent", "years experience",
          "trip id", "start location", "end location",
          "passport number", "expiration date",
     })
     deps = [
-        # FD({"A"}, {"C"}),
-        # FD({"C"}, {"D"}),
-        # FD({"A", "C"}, {"D"}),
         FD({"agent"}, {"years experience"}),
         FD({"traveler ssn"}, {"passport number"}),
         FD({"passport number"}, {"expiration date"}),
@@ -150,6 +146,8 @@ def main() -> None:
         print(dep)
     print()
     new_relations = bcnf_decomposition([relation], deps)
+    print("\nFinal relations:")
+    pprint(new_relations)
 
 
 if __name__ == "__main__":

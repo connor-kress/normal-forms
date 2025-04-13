@@ -29,6 +29,9 @@ class FD:
 class Relation:
     attrs: set[str]
 
+    def copy(self) -> Self:
+        return self.__class__(attrs=self.attrs.copy())
+
     def contains_all(self, attrs: set[str]) -> bool:
         return contains_all(self.attrs, attrs)
 
@@ -72,15 +75,31 @@ def get_dependency_violation(
     return transitive_dep
 
 
+def get_cover(attrs: set[str], deps: list[FD]) -> set[str]:
+    cover = attrs.copy()
+    while True:
+        print(f"\tcover: {cover}")
+        added = False
+        for dep in deps:
+            if contains_all(cover, dep.lhs) and not contains_all(cover, dep.rhs):
+                print(f"\tAdding dependency: {dep}")
+                cover = cover.union(dep.rhs)
+                added = True
+        if not added:
+            break
+    return cover
+
+
 def bcnf_decomposition(
     relations: list[Relation],
     deps: list[FD],
 ) -> list[Relation]:
+    relations = [rel.copy() for rel in relations]
     while True:
         print("Relations: ")
         pprint(relations)
         violation_found = False
-        for relation in relations:
+        for i, relation in enumerate(relations):
             key = get_primary_key(relation, deps)
             print("Key:", key)
             violation = get_dependency_violation(relation, deps, key)
@@ -89,11 +108,23 @@ def bcnf_decomposition(
             else:
                 violation_found = True
             print("Violation:", violation)
+            cover = get_cover(violation.lhs, deps)
+            new_relation = Relation(cover)
+            reduced_relation = Relation(
+                relation.attrs.difference(cover.difference(violation.lhs))
+            )
+            print(f"{new_relation=}")
+            print(f"{reduced_relation=}")
+            # print(f"Before: {relations=}")
+            del relations[i]
+            relations.insert(i, new_relation)
+            relations.insert(i, reduced_relation)
+            # print(f"After: {relations=}")
             input("Pause")
             break
         if not violation_found:
             break
-    return [Relation(set())]
+    return relations
 
 
 def main() -> None:

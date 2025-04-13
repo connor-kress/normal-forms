@@ -38,6 +38,21 @@ class Relation:
     def contains_any(self, attrs: set[str]) -> bool:
         return contains_any(self.attrs, attrs)
 
+    def format(self, deps: list[FD]) -> str:
+        key = get_primary_key(self, deps)
+        key_str = ", ".join(map(str, key))
+        remaining_attrs = self.attrs.difference(key)
+        remaining_str = ", ".join(map(str, remaining_attrs))
+        if remaining_attrs:
+            return f"({key_str}, {remaining_str})"
+        else:
+            return f"({key_str})"
+
+
+def print_relations(relations: list[Relation], deps: list[FD]) -> None:
+    for i, relation in enumerate(relations):
+        print(f"\tR{i+1}: {relation.format(deps)}")
+
 
 def get_primary_key(relation: Relation, deps: list[FD]) -> set[str]:
     key = relation.attrs.copy()
@@ -98,7 +113,7 @@ def bcnf_decomposition(
     relations = [rel.copy() for rel in relations]
     while True:
         print("\nRelations: ")
-        pprint(relations)
+        print_relations(relations, deps)
         print()
         violation_found = False
         for i, relation in enumerate(relations):
@@ -116,8 +131,8 @@ def bcnf_decomposition(
             reduced_relation = Relation(
                 relation.attrs.difference(cover.difference(violation.lhs))
             )
-            # print(f"{new_relation=}")
-            # print(f"{reduced_relation=}")
+            # print(f"New relation: {new_relation.format(deps)}")
+            # print(f"Reduced relation: {reduced_relation.format(deps)}")
             del relations[i]
             relations.insert(i, new_relation)
             relations.insert(i, reduced_relation)
@@ -140,14 +155,14 @@ def main() -> None:
         FD({"trip id"}, {"start location", "end location"}),
     ]
     print("Relation:")
-    pprint(relation)
+    print(relation.format(deps))
     print("\nDependencies:")
     for dep in deps:
-        print(dep)
+        print(f"\t{dep}")
     print()
     new_relations = bcnf_decomposition([relation], deps)
     print("\nFinal relations:")
-    pprint(new_relations)
+    print_relations(new_relations, deps)
 
 
 if __name__ == "__main__":

@@ -117,9 +117,7 @@ def bcnf_decomposition(
     relations: list[Relation],
     deps: list[FD],
 ) -> list[Relation]:
-    """Decomposes a set a relations based on the Boyce-Codd
-    Normal Form reduction algorithm.
-    """
+    """Decomposes a set a relations based on the Boyce-Codd Normal Form."""
     relations = [rel.copy() for rel in relations]
     while True:
         print("\nRelations: ")

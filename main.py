@@ -18,9 +18,11 @@ class FD:
     rhs: set[str]
 
     def __str__(self) -> str:
-        left = list(self.lhs)[0] if len(self.lhs) == 1 else self.lhs
-        right = list(self.rhs)[0] if len(self.rhs) == 1 else self.rhs
-        return f"{left!r} -> {right!r}"
+        left  = str(list(self.lhs)[0]) if len(self.lhs) == 1 \
+            else "(" + ", ".join(map(str, self.lhs)) + ")"
+        right = str(list(self.rhs)[0]) if len(self.rhs) == 1 \
+            else "(" + ", ".join(map(str, self.rhs)) + ")"
+        return f"{left} -> {right}"
 
     def copy(self) -> Self:
         return self.__class__(lhs=self.lhs.copy(), rhs=self.rhs.copy())
